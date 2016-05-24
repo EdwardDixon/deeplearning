@@ -1,9 +1,11 @@
+import os.path
 import numpy as np
 from PIL import Image
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Activation
 from keras.callbacks import Callback
+from keras.optimizers import sgd
 
 IM_SIZE = 256
 IM_CHANNELS = 3
@@ -22,12 +24,11 @@ def save_pixels(path_to_image_file, image_array):
 # Takes care of clipping, casting to int8, etc.
 def save_ndarray(path_to_outfile, x, width = IM_SIZE, height = IM_SIZE, channels = IM_CHANNELS):
 
-    # TODO Figure out the mistake in building input matrices that makes this necessary!
-    x = np.rot90(x, k=0)
-
     out_arr = np.clip(x, 0, 255)
     out_arr = np.reshape(out_arr, (width, height, channels), 1)
 
+    out_arr = np.rot90(out_arr, k=3)
+    out_arr = np.fliplr(out_arr)
     save_pixels(path_to_outfile, out_arr.astype(np.int8))
 
 
@@ -41,10 +42,15 @@ def map_imagematrix_to_tuples(im):
     X = np.zeros((image_width * image_height, 2))
 
     # Fill in y values
-    X[:,0] = np.repeat(range(0, image_height), image_width, 0)
+    X[:,1] = np.repeat(range(0, image_height), image_width, 0)
 
     # Fill in x values
-    X[:,1] = np.tile(range(0, image_width), image_height)
+    X[:,0] = np.tile(range(0, image_width), image_height)
+
+
+    # Normalize X
+    X = X - X.mean()
+    X = X / X.var()
 
     # Prepare target values
     Y = np.reshape(im, (image_width * image_height, 3))
@@ -63,23 +69,30 @@ model = Sequential()
 
 # Inputs: x and y
 model.add(Dense(20, input_dim=2, activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
-model.add(Dense(20,  activation="relu"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
 
 # Outputs: r,g,b
 model.add(Dense(3))
 
+if os.path.isfile('facepaint_model.h5'):
+    # Loading old model, will continue training from saved point
+    print ("Loading old model...")
+    model.load_weights('facepaint_model.h5')
+else:
+    print ("Could not find weights, starting from scratch")
+
+
+my_optimizer = sgd(clipvalue = 10000000, lr=0.0001)
+
 model.compile(loss='mean_squared_error',
-               optimizer='adagrad')
+               optimizer='adamax')
 
 # Let's see the how the output changes as the model trains
 class training_monitor(Callback):
@@ -89,10 +102,14 @@ class training_monitor(Callback):
     def on_epoch_end(self, epoch, logs={}):
         cur_img = model.predict(X)
         save_ndarray("image_epoch_" + str(self.epoch) + ".jpg", cur_img)
+        model.save_weights("facepaint_model_epoch_" + str(self.epoch) + ".h5", overwrite=True)
         self.epoch = self.epoch + 1
 
 image_progress_monitor = training_monitor()
-model.fit(X, Y, nb_epoch = 1000, batch_size = 100, callbacks=[image_progress_monitor], shuffle=True)
+model.fit(X, Y, nb_epoch = 1000, batch_size = 32, callbacks=[image_progress_monitor], shuffle=True)
+
+# Save final (best?) model
+model.save_weights("facepaint_model.h5")
 
 learnt_image = model.predict(X)
 save_ndarray("final_image.jpg", learnt_image)
