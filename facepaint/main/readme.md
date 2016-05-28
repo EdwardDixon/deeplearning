@@ -7,4 +7,6 @@ What's the point? Mostly, educating the programmer!  Because the output is so vi
 
 Not done, but could be interesting: mask out areas of the image during training, then ask the model to make predicitions to fill in those missing areas.
 
+The renderer script will load pre-trained model weights and use them to render a new image at whatever resolution you like; it can also scale and translate, and even render areas outside the original image.  Since the model you trained doesn't have any pixels internally, it is resolution-independent - you can think of it as vector artwork - but infinite in extent!
+
 I learned a lot in writing and playing with this - hopefully, you will too.
