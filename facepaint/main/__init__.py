@@ -7,6 +7,9 @@ from keras.layers import Activation
 from keras.callbacks import Callback
 from keras.optimizers import sgd
 
+import argparse
+
+
 IM_SIZE = 256
 IM_CHANNELS = 3
 
@@ -58,17 +61,27 @@ def map_imagematrix_to_tuples(im):
     return (X, Y)
 
 
+parser = argparse.ArgumentParser()
 
+parser.add_argument("--target_image", type=str, action="store", help="Path to the image file we'll be trying to learn", required = True)
+parser.add_argument("--model_output_root", type=str, action="store", help="root of name for various save files", default = "facepaint_out_")
+parser.add_argument("--pixels", type=int, action="store", default=256, help="Input image will be resampled to this size.  Easy way to control training time.")
+parser.add_argument("--batch_size", type=int, action="store", default=32, help="Size of batch of samples used to update weights at each step")
+parser.add_argument("--epochs", type=int, action="store", default=1000, help="Number of passes to take through the training data")
 
-image_matrix = load_pixels("head.jpg", IM_SIZE, IM_SIZE)
-#save_pixels("out.jpg", test_im)
+args = parser.parse_args()
+
+image_matrix = load_pixels(args.target_image, args.pixels, args.pixels)
+
 
 X,Y = map_imagematrix_to_tuples(image_matrix)
 
 model = Sequential()
 
-# Inputs: x and y
+# Inputs: x and y => 2 dimensions
 model.add(Dense(20, input_dim=2, activation="relu"))
+
+# Adding more layers will give better results. Don't be shy - try doubling!
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
@@ -81,15 +94,14 @@ model.add(Dense(20,  activation="relu", init="glorot_normal"))
 # Outputs: r,g,b
 model.add(Dense(3))
 
-if os.path.isfile('facepaint_model.h5'):
+model_weights_name = args.model_output_root + '_model.h5'
+if os.path.isfile(model_weights_name):
     # Loading old model, will continue training from saved point
     print ("Loading old model...")
-    model.load_weights('facepaint_model.h5')
+    model.load_weights(model_weights_name)
 else:
     print ("Could not find weights, starting from scratch")
 
-
-my_optimizer = sgd(clipvalue = 10000000, lr=0.0001)
 
 model.compile(loss='mean_squared_error',
                optimizer='adamax')
@@ -101,15 +113,15 @@ class training_monitor(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         cur_img = model.predict(X)
-        save_ndarray("image_epoch_" + str(self.epoch) + ".jpg", cur_img)
-        model.save_weights("facepaint_model_epoch_" + str(self.epoch) + ".h5", overwrite=True)
+        save_ndarray(args.model_output_root + "_image_epoch_" + str(self.epoch) + ".jpg", cur_img)
+        model.save_weights(args.model_output_root + "_facepaint_model_epoch_" + str(self.epoch) + ".h5", overwrite=True)
         self.epoch = self.epoch + 1
 
 image_progress_monitor = training_monitor()
-model.fit(X, Y, nb_epoch = 1000, batch_size = 32, callbacks=[image_progress_monitor], shuffle=True)
+model.fit(X, Y, nb_epoch = args.epochs, batch_size = args.batch_size, callbacks=[image_progress_monitor], shuffle=True)
 
 # Save final (best?) model
-model.save_weights("facepaint_model.h5")
+model.save_weights(model_weights_name)
 
 learnt_image = model.predict(X)
-save_ndarray("final_image.jpg", learnt_image)
+save_ndarray(args.model_output_root + "_final_image.jpg", learnt_image)
