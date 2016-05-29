@@ -5,7 +5,7 @@ This is toy regression problem ("image regression", essentially a port of [Karpa
 
 What does it do?  You feed it a photo as *test data*; it then tries to learn to predict the (r,g,b) for a given (x,y).  For example, an image 256 pixels by 256 pixels yields 65,536 training examples.  We can see what the model has learned by asking it to give an (r,g,b) for each (x,y) in the original image.  Below, a video shows how the output changes as the model converges.
 
-[![Training progression, one frame per epoch](https://img.youtube.com/vi/dRIUYYNMA-M/0.jpg)](https://www.youtube.com/watch?v=dRIUYYNMA-M)
+[![Training progression, one frame per epoch](images/video_link.png)](https://www.youtube.com/watch?v=dRIUYYNMA-M)
 
 What's the point? Mostly, educating the programmer!  Because the output is so visual (it writes out one JPG per training iteration to show what it has learned so far), it really makes it easy to see the effect of changing the model (more/fewer layers, wider/narrower layers) or of tweaking meta-paramters or optimizers.  
 
