@@ -8,15 +8,10 @@ from keras.callbacks import Callback
 from keras.optimizers import sgd
 
 import argparse
-
+import utils
 
 IM_SIZE = 256
 IM_CHANNELS = 3
-
-def load_pixels(path_to_image_file, image_width, image_height):
-    im = Image.open(path_to_image_file).resize((image_width, image_height), Image.BICUBIC)
-    pixels = np.array(im)
-    return pixels
 
 
 def save_pixels(path_to_image_file, image_array):
@@ -33,32 +28,6 @@ def save_ndarray(path_to_outfile, x, width = IM_SIZE, height = IM_SIZE, channels
     out_arr = np.rot90(out_arr, k=3)
     out_arr = np.fliplr(out_arr)
     save_pixels(path_to_outfile, out_arr.astype(np.int8))
-
-
-# Create suitable training matrix
-def map_imagematrix_to_tuples(im):
-
-    image_height = im.shape[0]
-    image_width = im.shape[1]
-
-    # One row per pixel
-    X = np.zeros((image_width * image_height, 2))
-
-    # Fill in y values
-    X[:,1] = np.repeat(range(0, image_height), image_width, 0)
-
-    # Fill in x values
-    X[:,0] = np.tile(range(0, image_width), image_height)
-
-
-    # Normalize X
-    X = X - X.mean()
-    X = X / X.var()
-
-    # Prepare target values
-    Y = np.reshape(im, (image_width * image_height, 3))
-
-    return (X, Y)
 
 
 parser = argparse.ArgumentParser()
@@ -113,7 +82,7 @@ class training_monitor(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         cur_img = model.predict(X)
-        save_ndarray(args.model_output_root + "_image_epoch_" + str(self.epoch) + ".jpg", cur_img)
+        save_ndarray(args.model_output_root + "_image_epoch_" + str(self.epoch) + ".jpg", cur_img, args.pixels, args.pixels)
         model.save_weights(args.model_output_root + "_facepaint_model_epoch_" + str(self.epoch) + ".h5", overwrite=True)
         self.epoch = self.epoch + 1
 
@@ -124,4 +93,4 @@ model.fit(X, Y, nb_epoch = args.epochs, batch_size = args.batch_size, callbacks=
 model.save_weights(model_weights_name)
 
 learnt_image = model.predict(X)
-save_ndarray(args.model_output_root + "_final_image.jpg", learnt_image)
+save_ndarray(args.model_output_root + "_final_image.jpg", learnt_image, args.pixels, args.pixels)
