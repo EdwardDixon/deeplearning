@@ -53,7 +53,7 @@ def generate_data(X_in, Y_in, mask_image, batch_size = 32, image_size = 80):
     mask_mat = np.mean(mask_image, 2)
 
     # Intensify TODO Check if really a good idea!
-    mask_mat = 0.01 + mask_mat * mask_mat
+    mask_mat = 0.01 + mask_mat #* mask_mat
 
     # Make sure all numbers sum to 1
     mask_mat = mask_mat / np.sum(mask_mat)
