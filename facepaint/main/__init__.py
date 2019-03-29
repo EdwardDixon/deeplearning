@@ -8,7 +8,7 @@ from keras.callbacks import Callback
 from keras.optimizers import sgd
 
 import argparse
-import utils
+from utils import load_pixels, map_imagematrix_to_tuples, generate_data
 
 IM_SIZE = 256
 IM_CHANNELS = 3
@@ -31,17 +31,21 @@ def save_ndarray(path_to_outfile, x, width = IM_SIZE, height = IM_SIZE, channels
 
 
 parser = argparse.ArgumentParser()
-
 parser.add_argument("--target_image", type=str, action="store", help="Path to the image file we'll be trying to learn", required = True)
 parser.add_argument("--model_output_root", type=str, action="store", help="root of name for various save files", default = "facepaint_out_")
 parser.add_argument("--pixels", type=int, action="store", default=256, help="Input image will be resampled to this size.  Easy way to control training time.")
 parser.add_argument("--batch_size", type=int, action="store", default=32, help="Size of batch of samples used to update weights at each step")
 parser.add_argument("--epochs", type=int, action="store", default=1000, help="Number of passes to take through the training data")
-
+parser.add_argument("--mask", type=str, action="store", help="A greyscale image that tells us which parts of the target are more important.", required=False)
 args = parser.parse_args()
 
 image_matrix = load_pixels(args.target_image, args.pixels, args.pixels)
-
+mask_matrix = None
+if args.mask == None:
+    # Give all pixels equal weight if no mask specified
+    mask_matrix = np.ones(shape=image_matrix.shape)
+else:
+    mask_matrix = load_pixels(args.mask, args.pixels, args.pixels)
 
 X,Y = map_imagematrix_to_tuples(image_matrix)
 
@@ -51,7 +55,7 @@ model = Sequential()
 model.add(Dense(20, input_dim=2, activation="relu"))
 
 # Adding more layers will give better results. Don't be shy - try doubling!
-model.add(Dense(20,  activation="relu", init="glorot_normal"))
+model.add(Dense(20,  activation="tanh", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
@@ -73,7 +77,7 @@ else:
 
 
 model.compile(loss='mean_squared_error',
-               optimizer='adamax')
+               optimizer='adadelta')
 
 # Let's see the how the output changes as the model trains
 class training_monitor(Callback):
@@ -87,8 +91,8 @@ class training_monitor(Callback):
         self.epoch = self.epoch + 1
 
 image_progress_monitor = training_monitor()
-model.fit(X, Y, nb_epoch = args.epochs, batch_size = args.batch_size, callbacks=[image_progress_monitor], shuffle=True)
-
+#model.fit(X, Y, nb_epoch = args.epochs, batch_size = args.batch_size, callbacks=[image_progress_monitor], shuffle=True)
+model.fit_generator(generator=generate_data(X,Y,mask_matrix,args.batch_size,image_size=args.pixels), steps_per_epoch=5000)
 # Save final (best?) model
 model.save_weights(model_weights_name)
 
