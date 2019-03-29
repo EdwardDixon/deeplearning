@@ -1,4 +1,4 @@
-###Facepaint
+### Facepaint
 This is toy regression problem ("image regression", essentially a port of [Karpathy's excellent ConvNetJS demo](http://cs.stanford.edu/people/karpathy/convnetjs/demo/image_regression.html)), written in Keras.  To run it, you'll need to have Python, Keras, and either TensorFlow or Theano (which Keras uses to do the actual computations).
 
 ![Example of a target image and the final output image](images/target_and_learnt_image.jpg)

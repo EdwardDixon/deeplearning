@@ -55,7 +55,7 @@ model = Sequential()
 model.add(Dense(20, input_dim=2, activation="relu"))
 
 # Adding more layers will give better results. Don't be shy - try doubling!
-model.add(Dense(20,  activation="tanh", init="glorot_normal"))
+model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
 model.add(Dense(20,  activation="relu", init="glorot_normal"))
@@ -77,7 +77,7 @@ else:
 
 
 model.compile(loss='mean_squared_error',
-               optimizer='adadelta')
+               optimizer='adam')
 
 # Let's see the how the output changes as the model trains
 class training_monitor(Callback):
@@ -92,7 +92,7 @@ class training_monitor(Callback):
 
 image_progress_monitor = training_monitor()
 #model.fit(X, Y, nb_epoch = args.epochs, batch_size = args.batch_size, callbacks=[image_progress_monitor], shuffle=True)
-model.fit_generator(generator=generate_data(X,Y,mask_matrix,args.batch_size,image_size=args.pixels), steps_per_epoch=5000)
+model.fit_generator(generator=generate_data(X,Y,mask_matrix,args.batch_size,image_size=args.pixels), steps_per_epoch=1000, epochs=args.epochs, callbacks=[image_progress_monitor])
 # Save final (best?) model
 model.save_weights(model_weights_name)
 
